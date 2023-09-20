@@ -1,27 +1,42 @@
 const express = require('express');
-const request = require('request');
+const axios = require('axios');
+const http = require('http');
+const https = require('https');
 
 const app = express();
+const port = 3802;
 
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  console.log('bbbbbbb')
+
+  // Remove the X-Frame-Options header
+  res.removeHeader('X-Frame-Options');
   next();
 });
 
-app.get('/api', (req, res) => {
-  const apiUrl = req.query.url;
+app.get('/', async (req, res) => {
+  try {
+    console.log('ccccccc')
+    const targetUrl = 'https://app.stage.bsktpay.co/checkout';
+    const response = await axios.get(targetUrl, {
+      responseType: 'stream',
+      httpAgent: new http.Agent({ keepAlive: true }),
+      httpsAgent: new https.Agent({ keepAlive: true }),
+    });
 
-  if (!apiUrl) {
-    return res.status(400).json({ type: 'error', message: 'Missing URL parameter' });
+    // Forward headers from the target URL to the response
+    Object.entries(response.headers).forEach(([key, value]) => {
+      res.setHeader(key, value);
+    });
+
+    // Pipe the response content from the target URL to the client
+    response.data.pipe(res);
+  } catch (error) {
+    console.error('Error fetching content:', error);
+    res.status(500).send('Error fetching content');
   }
-
-  request
-    .get(apiUrl)
-    .on('error', (error) => {
-      res.status(500).json({ type: 'error', message: error.message });
-    })
-    .pipe(res);
 });
 
-const PORT = process.env.PORT || 3802;
-app.listen(PORT, () => console.log(`listening on ${PORT}`));
+app.listen(port, () => {
+  console.log(`Proxy server listening at http://localhost:${port}`);
+});
