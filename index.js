@@ -4,7 +4,8 @@ const http = require('http');
 const https = require('https');
 
 const app = express();
-const port = 3802;
+const port  = process.env.PORT || 3802;
+;
 
 app.use((req, res, next) => {
   console.log('bbbbbbb')
